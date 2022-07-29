@@ -4,7 +4,7 @@
   "description": "Front End Capstone Project",
   "main": "app.js",
   "scripts": {
-    "start": "node ./server/index.js",
+    "start": "nodemon ./server/index.js -w",
     "server-dev": "webpack --mode development --watch & npx nodemon ./server/index.js",
     "build": "webpack --config ./webpack.config.js",
     "lint": "eslint --fix --ext .js,.jsx .",
@@ -18,6 +18,8 @@
     "cloudinary-core": "^2.13.0",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
+    "nodemon": "^2.0.19",
+    "pg": "^8.7.3",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
