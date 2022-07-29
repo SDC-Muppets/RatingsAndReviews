@@ -13,12 +13,17 @@ client.connect((err) => {
   console.log('connected');
 });
 
+// returns {product, page, count, results: [{review_id, ratings, summary, recommend, response, body, data reviewer_name, helpfulness, photos:[{id, url}]}]
+
 const testServer = (req, res) => {
-  client.query('SELECT * FROM reviews LIMIT 5', (err, results) => {
+  console.log('req.params', req.query.product_id);
+  client.query(`SELECT * FROM reviews WHERE product_id = ${req.query.product_id} LIMIT 5`, (err, results) => {
     if (err) {
       console.log('query err');
     }
-    res.status(200).json(results.rows);
+    res.status(200).json({ product: req.query.product_id, page: 0, count: 5, results: [results.rows] });
   })
-}
+
+};
+
 module.exports.testServer = testServer;
