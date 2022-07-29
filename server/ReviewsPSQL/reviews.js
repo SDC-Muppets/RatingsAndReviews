@@ -17,7 +17,7 @@ client.connect((err) => {
 
 const testServer = (req, res) => {
   console.log('req.params', req.query.product_id);
-  client.query(`SELECT * FROM reviews WHERE product_id = ${req.query.product_id} LIMIT 5`, (err, results) => {
+  client.query(`SELECT * FROM reviews WHERE product_id = ${req.query.product_id} AND reported = false`, (err, results) => {
     if (err) {
       console.log('query err');
     }
