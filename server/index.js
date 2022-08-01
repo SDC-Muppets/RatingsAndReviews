@@ -11,7 +11,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 
-app.get('/test', db.testServer);
+app.get('/reviews', db.getReviews);
+app.get('/reviews/meta', db.getMeta);
+app.put('/reviews/report', db.reportReview);
+app.put('/reviews/helpful', db.markHelpful);
+
 app.get('/qa/questions/:id/all/:page', getAll);
 
 app.listen(PORT, () => console.log(`Server running on localhost:${PORT}`));
