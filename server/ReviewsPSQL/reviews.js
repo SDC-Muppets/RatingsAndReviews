@@ -17,8 +17,7 @@ client.connect((err) => {
 // parameters : { page, count, sort, product_id }
 
 const testServer = (req, res) => {
-  console.log('req.params', req.query.product_id);
-  client.query(`SELECT R.*, STRING_AGG(P.url, ', ' ORDER BY P.id) AS photos FROM reviews R LEFT JOIN reviews_photos P ON R.review_id = P.review_id WHERE R.product_id = ${req.query.product_id} AND R.reported = false GROUP BY R.review_id`, (err, results) => {
+  client.query(`SELECT R.*, COALESCE(JSON_AGG(JSON_BUILD_OBJECT('id', P.id, 'url', P.url) ORDER BY P.id) FILTER (WHERE P.id IS NOT NULL), '[]') AS photos FROM reviews R LEFT JOIN reviews_photos P ON R.review_id = P.review_id WHERE R.product_id = ${req.query.product_id} AND R.reported = false GROUP BY R.review_id`, (err, results) => {
     if (err) {
       console.log('query err');
     }
@@ -29,3 +28,4 @@ const testServer = (req, res) => {
 };
 
 module.exports.testServer = testServer;
+
