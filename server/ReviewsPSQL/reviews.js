@@ -59,8 +59,8 @@ const markHelpful = (req, res) => {
 
 const addReview = (req, res) => {
   console.log(req.body);
-  console.log(JSON.stringify(req.body))
-  client.query(`INSERT INTO reviews_photos(review_id, url) SELECT (SELECT MAX(review_id) FROM reviews), json_array_elements('${JSON.stringify(req.body)}')`, (err, results) => {
+  console.log(JSON.stringify(req.body));
+  client.query(`INSERT INTO characteristics(product_id, name) SELECT 99999,json_array_elements('["Size", "Width", "Comfort", "Quality", "Length", "Fit"]')`, (err, results) => {
     if (err) {
       console.log('add review err', err);
     }
@@ -72,8 +72,15 @@ module.exports = { getReviews, getMeta, reportReview, markHelpful, addReview };
 
 // WITH insert_review as (INSERT INTO reviews(product_id, rating, date, summary, body, recommend, reported, reviewer_name, reviewer_email, response, helpfulness)
 // VALUES(req.query.product_id, req.query.rating, CURRENT_DATE, req.query.summary, req.query.body, req.query.recommend, false, req.query.name, req.query.email)),
-// WITH insert_photos as (INSERT INTO reviews_photos(review_id, url) VALUES (3, json_array_elements('${JSON.stringify(req.body)}'))
+// WITH insert_photos as (INSERT INTO reviews_photos(review_id, url) SELECT (SELECT MAX(review_id) FROM reviews), json_array_elements('${JSON.stringify(req.body)}))
 // )
 
 // insert into reviews_photos (review_id, url)
 // values (3, json_array_elements(${req.body}))
+
+// create sequence characteristics_seq AS integer start 3347679 owned by characteristics.id;
+// CREATE SEQUENCE
+// sdc=# Alter table reviews_photos
+// sdc-# alter column id
+// sdc-# set default nextval('reviews_photos_seq');
+// ALTER TABLE
