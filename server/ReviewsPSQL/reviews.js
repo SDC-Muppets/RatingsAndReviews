@@ -49,15 +49,31 @@ const reportReview = (req, res) => {
 };
 
 const markHelpful = (req, res) => {
-  client.query(`UPDATE reviews SET helpfulness = helpfullness + 1 WHERE review_id = ${req.query.review_id}`, (err) => {
+  client.query(`UPDATE reviews SET helpfulness = helpfulness + 1 WHERE review_id = ${req.query.review_id}`, (err) => {
     if (err) {
       console.log('mark helpful err', err);
     }
     res.sendStatus(200);
   });
 };
-module.exports = { getReviews, getMeta, reportReview };
 
-update reviews
-set helpfulness = helpfulness + 1
-where review_id = 8;
+const addReview = (req, res) => {
+  console.log(req.body);
+  console.log(JSON.stringify(req.body))
+  client.query(`INSERT INTO reviews_photos(review_id, url) SELECT (SELECT MAX(review_id) FROM reviews), json_array_elements('${JSON.stringify(req.body)}')`, (err, results) => {
+    if (err) {
+      console.log('add review err', err);
+    }
+    res.status(200).send('post worked');
+  });
+};
+
+module.exports = { getReviews, getMeta, reportReview, markHelpful, addReview };
+
+// WITH insert_review as (INSERT INTO reviews(product_id, rating, date, summary, body, recommend, reported, reviewer_name, reviewer_email, response, helpfulness)
+// VALUES(req.query.product_id, req.query.rating, CURRENT_DATE, req.query.summary, req.query.body, req.query.recommend, false, req.query.name, req.query.email)),
+// WITH insert_photos as (INSERT INTO reviews_photos(review_id, url) VALUES (3, json_array_elements('${JSON.stringify(req.body)}'))
+// )
+
+// insert into reviews_photos (review_id, url)
+// values (3, json_array_elements(${req.body}))

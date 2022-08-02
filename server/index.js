@@ -15,6 +15,7 @@ app.get('/reviews', db.getReviews);
 app.get('/reviews/meta', db.getMeta);
 app.put('/reviews/report', db.reportReview);
 app.put('/reviews/helpful', db.markHelpful);
+app.post('/reviews', db.addReview);
 
 app.get('/qa/questions/:id/all/:page', getAll);
 
