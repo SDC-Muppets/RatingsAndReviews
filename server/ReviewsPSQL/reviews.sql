@@ -29,7 +29,7 @@ CREATE TABLE reviews (
   _date TEXT NOT NULL,
   summary TEXT NOT NULL,
   body TEXT NOT NULL,
-  recommended BOOLEAN NOT NULL,
+  recommend BOOLEAN NOT NULL,
   reported BOOLEAN NOT NULL,
   reviewer_name TEXT NOT NULL,
   reviewer_email TEXT NOT NULL,
