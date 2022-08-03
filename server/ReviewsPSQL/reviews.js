@@ -31,11 +31,23 @@ const getReviews = (req, res) => {
 };
 
 const getMeta = (req, res) => {
-  client.query(`SELECT JSON_BUILD_OBJECT(rating, COUNT(rating)) as ratings FROM reviews WHERE product_id = ${req.query.product_id} GROUP BY rating`, (err, results) => {
+  client.query(`SELECT json_build_object(
+    'product_id', ${req.query.product_id},
+    'ratings', (select json_build_object('1', (SELECT count(rating) FROM reviews WHERE rating = 1 AND product_id = ${req.query.product_id}), '2', (SELECT count(rating) FROM reviews WHERE rating = 2 AND product_id = ${req.query.product_id}), '3', (SELECT count(rating) FROM reviews WHERE rating = 3 AND product_id = ${req.query.product_id}), '4', (SELECT count(rating) FROM reviews WHERE rating = 4 AND product_id = ${req.query.product_id}), '5', (SELECT count(rating) FROM reviews WHERE rating = 5 AND product_id = ${req.query.product_id}))),
+    'recommended', (SELECT json_build_object('true', (SELECT count(recommend) FROM reviews WHERE recommend = true AND product_id = 4), 'false', (SELECT count(recommend) FROM reviews WHERE recommend = false AND product_id = ${req.query.product_id}))),
+    'characteristics', (SELECT json_build_object(
+      'Fit', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Fit'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Fit'))::decimal(5, 4))),
+      'Length', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Length'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Length'))::decimal(5, 4))),
+      'Comfort', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Comfort'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Comfort'))::decimal(5, 4))),
+      'Quality', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Quality'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Quality'))::decimal(5, 4))),
+      'Width', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Width'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Width'))::decimal(5, 4))),
+      'Size', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Size'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = ${req.query.product_id} AND name = 'Size'))::decimal(5, 4)))
+    ))
+  )`, (err, results) => {
     if (err) {
       console.log('get meta err', err);
     }
-    res.status(200).json(results.rows);
+    res.status(200).json(results.rows[0]['json_build_object']);
   });
 };
 
@@ -60,27 +72,58 @@ const markHelpful = (req, res) => {
 const addReview = (req, res) => {
   console.log(req.body);
   console.log(JSON.stringify(req.body));
-  client.query(`INSERT INTO characteristics(product_id, name) SELECT 99999,json_array_elements('["Size", "Width", "Comfort", "Quality", "Length", "Fit"]')`, (err, results) => {
+  client.query(`
+  WITH insert_review AS (
+    INSERT INTO reviews(product_id, rating, date, summary, body, recommend, reported, name, email, response, helpfulness)
+    SELECT (${req.body.product_id}::integer), (${req.body.rating}::integer), (CURRENT_DATE::text), ('${req.body.summary}'::text), ('${req.body.body}'::text), ${req.body.recommend}, false, ('${req.body.name}'::text), ('${req.body.email}'::text), NULL, 0
+    RETURNING review_id
+  ), insert_photos AS (
+    INSERT INTO reviews_photos(review_id, url)
+    SELECT (SELECT review_id FROM insert_review), json_array_elements('${JSON.stringify(req.body.photos)}')
+    RETURNING review_id
+  ) INSERT INTO characteristic_reviews(characteristic_id, review_id, value)
+  SELECT key_obj.key::integer, (SELECT review_id FROM insert_review), key_obj.value::integer
+  FROM (SELECT * FROM JSON_EACH_TEXT('${JSON.stringify(req.body.characteristics)}')) key_obj`, (err, results) => {
     if (err) {
       console.log('add review err', err);
     }
-    res.status(200).send('post worked');
+    res.sendStatus(200);
   });
 };
 
 module.exports = { getReviews, getMeta, reportReview, markHelpful, addReview };
 
-// WITH insert_review as (INSERT INTO reviews(product_id, rating, date, summary, body, recommend, reported, reviewer_name, reviewer_email, response, helpfulness)
-// VALUES(req.query.product_id, req.query.rating, CURRENT_DATE, req.query.summary, req.query.body, req.query.recommend, false, req.query.name, req.query.email)),
-// WITH insert_photos as (INSERT INTO reviews_photos(review_id, url) SELECT (SELECT MAX(review_id) FROM reviews), json_array_elements('${JSON.stringify(req.body)}))
+// getMeta
+
+// // characteristics
+// SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Fit'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Fit'))::decimal(5, 4));
+
+// SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Length'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Length'))::decimal(5, 4));
+
+// SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Comfort'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Comfort'))::decimal(5, 4));
+
+// SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Quality'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Quality'))::decimal(5, 4));
+
+// SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Width'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Width'))::decimal(5, 4));
+
+// SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Size'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Size'))::decimal(5, 4));
+
+// // recommend
+// SELECT json_build_object('true', (SELECT count(recommend) FROM reviews WHERE recommend = true AND product_id = 4), 'false', (SELECT count(recommend) FROM reviews WHERE recommend = false AND product_id = 4));
+
+// // rating
+// select json_build_object('1', (SELECT count(rating) FROM reviews WHERE rating = 1 AND product_id = 4), '2', (SELECT count(rating) FROM reviews WHERE rating = 2 AND product_id = 4), '3', (SELECT count(rating) FROM reviews WHERE rating = 3 AND product_id = 4), '4', (SELECT count(rating) FROM reviews WHERE rating = 4 AND product_id = 4), '5', (SELECT count(rating) FROM reviews WHERE rating = 5 AND product_id = 4));
+
+// SELECT json_build_object(
+//   'product_id', 4,
+//   'ratings', (select json_build_object('1', (SELECT count(rating) FROM reviews WHERE rating = 1 AND product_id = 4), '2', (SELECT count(rating) FROM reviews WHERE rating = 2 AND product_id = 4), '3', (SELECT count(rating) FROM reviews WHERE rating = 3 AND product_id = 4), '4', (SELECT count(rating) FROM reviews WHERE rating = 4 AND product_id = 4), '5', (SELECT count(rating) FROM reviews WHERE rating = 5 AND product_id = 4))),
+//   'recommended', (SELECT json_build_object('true', (SELECT count(recommend) FROM reviews WHERE recommend = true AND product_id = 4), 'false', (SELECT count(recommend) FROM reviews WHERE recommend = false AND product_id = 4))),
+//   'characteristics', (SELECT json_build_object(
+//     'Fit', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Fit'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Fit'))::decimal(5, 4))),
+//     'Length', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Length'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Length'))::decimal(5, 4))),
+//     'Comfory', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Comfort'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Comfort'))::decimal(5, 4))),
+//     'Quality', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Quality'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Quality'))::decimal(5, 4))),
+//     'Width', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Width'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Width'))::decimal(5, 4))),
+//     'Size', (SELECT json_build_object('id', (SELECT id from characteristics where product_id = 4 AND name = 'Size'), 'value', (SELECT AVG(VALUE) FROM characteristic_reviews where characteristic_id = (SELECT id from characteristics where product_id = 4 AND name = 'Size'))::decimal(5, 4)))
+//   ))
 // )
-
-// insert into reviews_photos (review_id, url)
-// values (3, json_array_elements(${req.body}))
-
-// create sequence characteristics_seq AS integer start 3347679 owned by characteristics.id;
-// CREATE SEQUENCE
-// sdc=# Alter table reviews_photos
-// sdc-# alter column id
-// sdc-# set default nextval('reviews_photos_seq');
-// ALTER TABLE
