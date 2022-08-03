@@ -17,7 +17,7 @@ client.connect((err) => {
 // parameters : { page, count, sort, product_id }
 
 const getReviews = (req, res) => {
-  client.query(`SELECT R.review_id, R.rating, R.summary, R.recommend, R.response, R.body, R.date, R.reviewer_name, R.helpfulness, COALESCE(JSON_AGG(JSON_BUILD_OBJECT('id', P.id, 'url', P.url) ORDER BY P.id) FILTER (WHERE P.id IS NOT NULL), '[]') AS photos FROM reviews R LEFT JOIN reviews_photos P ON R.review_id = P.review_id WHERE R.product_id = ${req.query.product_id} AND R.reported = false GROUP BY R.review_id`, (err, results) => {
+  client.query(`SELECT R.review_id, R.rating, R.summary, R.recommend, R.response, R.body, R.date, R.name, R.helpfulness, COALESCE(JSON_AGG(JSON_BUILD_OBJECT('id', P.id, 'url', P.url) ORDER BY P.id) FILTER (WHERE P.id IS NOT NULL), '[]') AS photos FROM reviews R LEFT JOIN reviews_photos P ON R.review_id = P.review_id WHERE R.product_id = ${req.query.product_id} AND R.reported = false GROUP BY R.review_id`, (err, results) => {
     if (err) {
       console.log('get reviews err', err);
     }
