@@ -14,6 +14,7 @@ routes.get('/', (req, res) => {
   })
   .catch((err) => {
     console.log('error in get reviews', err);
+    res.sendStatus(400);
   })
 });
 
